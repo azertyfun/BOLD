@@ -1,0 +1,1 @@
+Bold is a GRUB-like for the DCPU-16. See http://azertyfun.tk/projects/BOLD.php

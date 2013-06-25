@@ -65,8 +65,7 @@
 		set PC, memcpy
 	set PC, POP
 	
-	
-:backgroundColor DAT 0x9
+
 :line DAT 0
 :column DAT 0
 

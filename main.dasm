@@ -17,6 +17,10 @@
 	set B, 0x8000
 	hwi [monitor] ;Mapping monitor
 	
+	set A, 3
+	set B, 0x1
+	hwi [monitor] ;Setting border color
+	
 	jsr clear ;Clearing the screen (sets the background color)
 	
 	;Writing text
@@ -72,6 +76,8 @@
 		set Y, third
 	ife C, 0x63
 		set Z, third_end
+	
+	set X, [monitor]
 		
 	set PC, 0xE000
 	
@@ -90,6 +96,11 @@
 		add Z, 1
 		ifn Z, grub_end
 			sub PC, 4 ;Let's go back to loader_loop1
+			
+	set A, 3
+	set B, 0
+	hwi X ;Unsetting border color
+	
 	set A, 0
 	set B, 0
 	set C, 0

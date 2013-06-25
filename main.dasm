@@ -1,0 +1,106 @@
+; *************************
+; Project: GRUB
+; File: main.dasm
+; *************************
+
+:start
+
+	;First, we copy the loader at 0xE000.
+	set A, loader
+	set B, loader_end
+	set C, 0xE000
+	jsr memcpy
+
+	jsr detectPeriphs ;Detecting peripherals
+	
+	set A, 0
+	set B, 0x8000
+	hwi [monitor] ;Mapping monitor
+	
+	jsr clear ;Clearing the screen (sets the background color)
+	
+	;Writing text
+	set B, startupText
+	jsr write
+	
+	set B, first_name
+	jsr write
+	
+	set B, second_name
+	jsr write
+	
+	set B, third_name ;Comment these two lines if you only want to do a dual boot.
+	jsr write
+	
+:mainLoop
+	set A, 0
+	hwi [keyboard] ;Clears keyboard buffer
+		
+	;Waiting for user to type a letter
+	set A, 1
+	:waitKey_loop
+	hwi [keyboard]
+	ife C, 0
+		set PC, waitKey_loop
+		
+	set PC, handleKey
+
+;If letter is A or B, loading the OS
+:handleKey
+	ife C, 0x61
+		set PC, load
+	ife C, 0x62
+		set PC, load
+	ife C, 0x63 ;Comment these two lines if you only want to do a dual boot.
+		set PC, load
+	set PC, mainLoop
+
+:load
+	set B, waitText
+	jsr write
+	
+	set I, 0x0000
+	set Y, second
+	set Z, second_end
+	ife C, 0x61
+		set Y, first
+	ife C, 0x61
+		set Z, first_end
+		
+	;Comment these four lines if you only want to do a dual boot.
+	ife C, 0x63
+		set Y, third
+	ife C, 0x63
+		set Z, third_end
+		
+	set PC, 0xE000
+	
+	
+:loader
+	:loader_loop0
+		set [I], [Y]
+		add Y, 1
+		add I, 1
+		ifn Y, Z
+			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
+	DAT 0, 0
+	;Clearing RAM until reaching this
+	:loader_loop1
+		set [Z], 0
+		add Z, 1
+		ifn Z, grub_end
+			sub PC, 4 ;Let's go back to loader_loop1
+	set A, 0
+	set B, 0
+	set C, 0
+	set I, 0
+	set J, 0
+	set X, 0
+	set Y, 0
+	set Z, 0
+	set EX, 0
+	set PC, 0
+:loader_end
+
+:startupText DAT "WELCOME TO GRUB FOR DCPU-16.", 0
+:waitText DAT "Loading program. Please wait.", 0

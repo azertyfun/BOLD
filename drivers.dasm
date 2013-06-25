@@ -1,0 +1,77 @@
+; *************************
+; Project: GRUB
+; File: drivers.dasm
+; *************************
+
+; ======================================================================
+; This is only the needed drivers. Not anything else. I AM NOT AN OS ^^
+; ======================================================================
+		
+;;;FONCTION write (0x1)
+;;;DESCRIPTION Writes the text in arguments
+;;;ARG B Address of the string
+:write
+	set I, [line]
+	MUL I, 0x20
+	ADD I, 0x8000
+	
+	SET J, B
+	:write_loop
+		BOR [J], [color]
+		STI [I], [J]
+		IFN [J], 0
+			SET PC, write_loop
+			
+	add [line], 1
+	set PC, POP
+
+:detectPeriphs
+	HWN I
+	SET J, 0
+	:detectPeriphs_loop
+		HWQ J
+		IFE A, 0xf615
+			SET [monitor], J
+		IFE A, 0x7406
+			SET [keyboard], J
+		ADD J, 1
+		IFN J, I
+			SET PC, detectPeriphs_loop
+		
+	SET PC, POP
+	
+:clear
+	SET I, 0x8000
+	set J, [color]
+	BOR J, 0x0020
+	:clear_loop
+		SET [I], J
+		ADD I, 1
+		IFE I, 0x8180
+			SET PC, POP
+		SET PC, clear_loop
+
+; =======================
+; A : Start
+; B : End
+; C : Address to copy to
+; =======================
+	
+:memcpy
+	set [C], [A]
+	add A, 1
+	add C, 1
+	ifn A, B
+		set PC, memcpy
+	set PC, POP
+	
+	
+:backgroundColor DAT 0x9
+:line DAT 0
+:column DAT 0
+
+:monitor DAT 0
+:keyboard DAT 0
+
+:cursor DAT 0x911C
+:color DAT 0x9100

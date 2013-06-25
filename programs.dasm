@@ -1,0 +1,33 @@
+; *************************
+; Project: GRUB
+; File: OSes.dasm
+; *************************
+
+; ==================
+; DCPU BASIC 1.0
+; ==================
+
+
+:first_name DAT "a. DCPU Basic 1.0", 0 ;DAT "a. YOUR_NAME HERE", 0
+:first
+	#include programs/first.dasm ;Replace the content of this file by your program/OS/CS
+:first_end
+
+
+	; ==================
+	; FROST
+	; ==================
+
+:second_name DAT "b. FrOST", 0 ;DAT "b. YOUR_NAME HERE", 0
+:second
+	#include programs/second.dasm ;Replace the content of this file by your program/OS/CS
+:second_end
+	
+	; ==============
+	; Simple OS v2
+	; ==============
+	
+:third_name DAT "c. Simple OS v2", 0 ;DAT "c. YOUR_NAME HERE", 0
+:third
+	#include programs/third.dasm ;Replace the content of this file by your program/OS/CS
+:third_end

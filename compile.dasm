@@ -1,0 +1,17 @@
+; *************************
+; Project: GRUB
+; File: compile.dasm
+; *************************
+
+; ========
+; INFO
+; ========
+; This is the file you need to assemble to DCPU with DevCPU.
+
+set PC, start
+
+#include main.dasm
+#include drivers.dasm
+#include programs.dasm
+
+:GRUB_end DAT 0x1234

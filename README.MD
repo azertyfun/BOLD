@@ -6,6 +6,7 @@ This version of BOLD contains by default :
 - DCPU Basic 1.0 (see http://azertyfun.tk/projects/DCPU-basic.php)
 - FrOST (see http://azertyfun.tk/projects/FrOSt.php and https://github.com/FrOSt-Foundation/FrOSt)
 - SimpleOS v2 (see http://azertyfun.tk/projects/SimpleOS-v2.php)
+- SimpleOS v1 (see http://azertyfun.tk/projects/SimpleOS.php)
 
 INSTALLATION
 ------------

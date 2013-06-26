@@ -3,31 +3,38 @@
 ; File: OSes.dasm
 ; *************************
 
+:ptr_names DAT name_1, name_2, name_3, name_4 ;Comment after name_2 if you only want 2 OS, or name_3 if you want 3.
+:ptr_programs DAT first, second, third, fourth ;Comment after second if you only want 2 OS, or third if you want 3.
+:ptr_endPrograms DAT first_end, second_end, third_end, fourth_end ;Comment after second_end if you only want 2 OS, or third_end if you want 3.
+
+;NAMES MUST BE 30 CHARACTERS LONG AND START WITH A SPACE. FILL WITH SPACES !
+:name_1 DAT " DCPU Basic 1.0              ", 0
+:name_2 DAT " FrOSt                       ", 0
+:name_3 DAT " SimpleOS v2                 ", 0
+:name_4 DAT " SimpleOS v1                 ", 0 ;Name your OS if you add one
+
 ; ==================
 ; DCPU BASIC 1.0
 ; ==================
-
-
-:first_name DAT "a. DCPU Basic 1.0", 0 ;DAT "a. YOUR_NAME HERE", 0
 :first
 	#include programs/first.dasm ;Replace the content of this file by your program/OS/CS
 :first_end
 
-
-	; ==================
-	; FROST
-	; ==================
-
-:second_name DAT "b. FrOST", 0 ;DAT "b. YOUR_NAME HERE", 0
+; ==================
+; FROST
+; ==================
 :second
 	#include programs/second.dasm ;Replace the content of this file by your program/OS/CS
 :second_end
 	
-	; ==============
-	; Simple OS v2
-	; ==============
-	
-:third_name DAT "c. Simple OS v2", 0 ;DAT "c. YOUR_NAME HERE", 0
+; ==============
+; Simple OS v2
+; ==============
+
 :third
 	#include programs/third.dasm ;Replace the content of this file by your program/OS/CS
 :third_end
+
+:fourth
+	#include programs/fourth.dasm ;Replace the content of this file by your program/OS/CS
+:fourth_end

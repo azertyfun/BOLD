@@ -10,19 +10,18 @@
 ;;;FONCTION write (0x1)
 ;;;DESCRIPTION Writes the text in arguments
 ;;;ARG B Address of the string
+;;;ARG I Where to write (begins at 0x8000)
 :write
-	set I, [line]
-	MUL I, 0x20
-	ADD I, 0x8000
+	set PUSH, I
+	:write_loop0
+		set [I], [B]
+		bor [I], [color]
+		add I, 1
+		add B, 1
+		ifn [B], 0
+			set PC, write_loop0
 	
-	SET J, B
-	:write_loop
-		BOR [J], [color]
-		STI [I], [J]
-		IFN [J], 0
-			SET PC, write_loop
-			
-	add [line], 1
+	set I, POP
 	set PC, POP
 
 :detectPeriphs
@@ -50,6 +49,28 @@
 		IFE I, 0x8180
 			SET PC, POP
 		SET PC, clear_loop
+	
+; =======================
+; WRITE HIGHLIGHTED
+; B : String address
+; J : Address on screen
+; =======================
+	
+:write_hl
+	set PUSH, I
+	
+	:write_hl_loop0
+		set [I], [B]
+		bor [I], [color_hl]
+		add I, 1
+		add B, 1
+		ifn [B], 0
+			set PC, write_hl_loop0
+			
+	set I, POP
+	
+	set PC, POP
+	
 
 ; =======================
 ; A : Start
@@ -64,13 +85,9 @@
 	ifn A, B
 		set PC, memcpy
 	set PC, POP
-	
-
-:line DAT 0
-:column DAT 0
 
 :monitor DAT 0
 :keyboard DAT 0
 
-:cursor DAT 0x911C
-:color DAT 0x9100
+:color DAT 0xF000
+:color_hl DAT 0x0F00

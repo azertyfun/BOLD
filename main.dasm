@@ -3,8 +3,9 @@
 ; File: main.dasm
 ; *************************
 
-:start
+#define NB_PROGRAMS 4 ;Change to your number of OS (max 4)
 
+:start
 	;First, we copy the loader at 0xE000.
 	set A, loader
 	set B, loader_end
@@ -18,25 +19,36 @@
 	hwi [monitor] ;Mapping monitor
 	
 	set A, 3
-	set B, 0x1
+	set B, 0x0
 	hwi [monitor] ;Setting border color
 	
 	jsr clear ;Clearing the screen (sets the background color)
 	
-	;Writing text
-	set B, startupText
+	set B, GUI
+	set I, 0x8000
 	jsr write
-	
-	set B, first_name
-	jsr write
-	
-	set B, second_name
-	jsr write
-	
-	set B, third_name ;Comment these two lines if you only want to do a dual boot.
-	jsr write
+
+	set [selected], 0
 	
 :mainLoop
+	
+	;Printing programs with one highlighted
+	
+	set C, ptr_names
+	set I, 0x80C1
+	set J, 0
+	:writeNames
+		set B, [C]
+		ife J, [selected] ;if selected, printing highlight
+			jsr write_hl
+		ifn J, [selected] ;else, printing normal
+			jsr write
+		add I, 0x20
+		add C, 1
+		add J, 1
+		ifn J, NB_PROGRAMS
+			set PC, writeNames
+	
 	set A, 0
 	hwi [keyboard] ;Clears keyboard buffer
 		
@@ -46,38 +58,64 @@
 	hwi [keyboard]
 	ife C, 0
 		set PC, waitKey_loop
-		
-	set PC, handleKey
+	
+	jsr handleKey
+	
+	set [0xFF88], [selected]
+	
+	ife Z, 0
+		set PC, mainLoop
+	set PC, load
 
-;If letter is A or B, loading the OS
+
 :handleKey
-	ife C, 0x61
-		set PC, load
-	ife C, 0x62
-		set PC, load
-	ife C, 0x63 ;Comment these two lines if you only want to do a dual boot.
-		set PC, load
-	set PC, mainLoop
+	set Z, 0
+	ifn C, 0x72
+		ifn C, 0x66
+			ifn C, 0x11
+				set PC, POP
+	
+	ife C, 0x72 ;ARROW_UP
+		set PC, handleKey_up
+	ife C, 0x11 ;RETURN
+		set PC, handleKey_return
+	
+	;Don't need to test down, if not up and not enter -> down -> continue in code ^^
+	
+	:handleKey_down
+		add [selected], 1
+		ife [selected], NB_PROGRAMS
+			set [selected], 0
+		set PC, POP
+	
+	:handleKey_up
+		sub [selected], 1
+		ife [selected], -1
+			set [selected], NB_PROGRAMS
+		ife [selected], NB_PROGRAMS
+			sub [selected], 1
+		set PC, POP ;Back to main loop
+	
+	:handleKey_return
+		set Z, 1 ;We want to launch then ^^
+		set PC, POP
 
 :load
-	set B, waitText
+	set B, str_loading
+	set I, 0x8160
 	jsr write
 	
-	set I, 0x0000
-	set Y, second
-	set Z, second_end
-	ife C, 0x61
-		set Y, first
-	ife C, 0x61
-		set Z, first_end
-		
-	;Comment these four lines if you only want to do a dual boot.
-	ife C, 0x63
-		set Y, third
-	ife C, 0x63
-		set Z, third_end
+	set I, 0
 	
-	set X, [monitor]
+	set A, [selected]
+	set Y, ptr_programs
+	add Y, A
+	set Y, [Y]
+	
+	set A, [selected]
+	set Z, ptr_endPrograms
+	add Z, A
+	set Z, [Z]
 		
 	set PC, 0xE000
 	
@@ -89,17 +127,12 @@
 		add I, 1
 		ifn Y, Z
 			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
-	DAT 0, 0
 	;Clearing RAM until reaching this
 	:loader_loop1
 		set [Z], 0
 		add Z, 1
 		ifn Z, grub_end
 			sub PC, 4 ;Let's go back to loader_loop1
-			
-	set A, 3
-	set B, 0
-	hwi X ;Unsetting border color
 	
 	set A, 0
 	set B, 0
@@ -113,5 +146,20 @@
 	set PC, 0
 :loader_end
 
-:startupText DAT "WELCOME TO GRUB FOR DCPU-16.", 0
-:waitText DAT "Loading program. Please wait.", 0
+:str_loading DAT "Loading program.                ", 0
+
+:GUI
+DAT 0x1b, 0x1b, 0x1b, 0x20, 0x20, 0x1b, 0x1b, 0x1b, 0x20, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x1b, 0x1b, "      azertyfun"
+DAT 0x1b, 0x20, 0x1b, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x20, 0x20, 0x1b, "          2013"
+DAT 0x1b, 0x1b, 0x1b, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x20, 0x20, 0x1b, "              "
+DAT 0x1b, 0x20, 0x1b, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x20, 0x1b, 0x20, 0x20, 0x20, 0x1b, 0x20, 0x20, 0x1b, "              "
+DAT 0x1b, 0x1b, 0x1b, 0x20, 0x20, 0x1b, 0x1b, 0x1b, 0x20, 0x20, 0x1b, 0x1b, 0x1b, 0x20, 0x1b, 0x1b, 0x1b, "               "
+DAT "--------------------------------"
+DAT "|                              |"
+DAT "|                              |"
+DAT "|                              |"
+DAT "|                              |"
+DAT "--------------------------------"
+DAT "R/F to select program           ", 0
+
+:selected DAT 0

@@ -37,6 +37,8 @@
 			SET [monitor], J
 		IFE A, 0x7406
 			SET [keyboard], J
+		IFE A, 0x24C5
+			SET [floppyDrive], J
 		ADD J, 1
 		IFN J, I
 			SET PC, detectPeriphs_loop
@@ -60,6 +62,7 @@
 
 :monitor DAT 0
 :keyboard DAT 0
+:floppyDrive DAT 0
 
 :color DAT 0xF000
 :color_hl DAT 0x0F00

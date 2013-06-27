@@ -61,24 +61,30 @@
 	
 	set [0xFF88], [selected]
 	
-	ife Z, 0
-		set PC, mainLoop
-	set PC, load
+	ife Z, 1
+		set PC, load
+	ife Z, 2
+		set PC, loadFloppy
+		
+	set PC, mainLoop
 
 
 :handleKey
 	set Z, 0
-	ifn C, 0x72
-		ifn C, 0x66
-			ifn C, 0x11
-				set PC, POP
+	ifn C, 0x72 ;KEY_R
+		ifn C, 0x66 ;KEY_F
+			ifn C, 0x11 ;KEY_RETURN
+				ifn C, 0x67 ;KEY_G
+					set PC, POP
 	
-	ife C, 0x72 ;ARROW_UP
+	ife C, 0x72 ;KEY_R
 		set PC, handleKey_up
 	ife C, 0x11 ;RETURN
 		set PC, handleKey_return
+	ife C, 0x67 ;KEY_G
+		set PC, handleKey_key_G
 	
-	;Don't need to test down, if not up and not enter -> down -> continue in code ^^
+	;If not R, return or G, must be down, don't need to test.
 	
 	:handleKey_down
 		add [selected], 1
@@ -98,52 +104,9 @@
 		set Z, 1 ;We want to launch then ^^
 		set PC, POP
 
-:load
-	set B, str_loading
-	set I, 0x8160
-	jsr write
-	
-	set I, 0
-	
-	set A, [selected]
-	set Y, ptr_programs
-	add Y, A
-	set Y, [Y]
-
-	set Z, ptr_endPrograms
-	add Z, A
-	set Z, [Z]
-		
-	set PC, 0xE000
-	
-	
-:loader
-	:loader_loop0
-		sti [I], [Y]
-		add Y, 1
-		ifn Y, Z
-			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
-	;Clearing RAM until reaching this
-	:loader_loop1
-		set [Z], 0
-		add Z, 1
-		ifn Z, grub_end
-			sub PC, 4 ;Let's go back to loader_loop1
-	
-	set A, 0
-	set B, 0
-	set C, 0
-	set X, 0
-	set Y, 0
-	set Z, 0
-	set I, 0
-	set J, 0
-	set EX, 0
-	
-	set PC, 0
-:loader_end
-
-:str_loading DAT "Loading program.                ", 0
+	:handleKey_key_G
+		set Z, 2 ;We want to boot from a floppy then
+		set PC, POP
 
 :GUI
 DAT 0x1F, 0x1B, 0x1C, 0x20, 0x1c, 0x1b, 0x1c, 0x20, 0x1F, 0x20, 0x20, 0x20, 0x20, 0x1F, 0x1b, 0x1C, "  2013 azertyfun"
@@ -157,6 +120,6 @@ DAT 0x08, "                              ", 0x08
 DAT 0x08, "                              ", 0x08
 DAT 0x08, "                              ", 0x08
 DAT 0x0C, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x0B
-DAT "ENTER: Start | R/F: Select OS   ", 0
+DAT "G: Boot from floppy|R/F: select ", 0
 
 :selected DAT 0

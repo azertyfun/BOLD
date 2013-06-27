@@ -33,12 +33,6 @@
 		add Y, 1
 		ifn Y, Z
 			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
-	;Clearing RAM until reaching this
-	:loader_loop1
-		set [Z], 0
-		add Z, 1
-		ifn Z, 0xDFFF
-			sub PC, 4 ;Let's go back to loader_loop1
 	
 	set A, 0
 	set B, 0
@@ -70,6 +64,7 @@
 		set B, str_noDrive
 	ife B, str_noDrive
 		set PC, loadFloppy_err
+	
 	set A, 0
 	hwi [floppyDrive] ;If no floppy in the drive (STATE_NO_MEDIA)
 	ife B, 0x0
@@ -87,13 +82,9 @@
 	ife B, str_noReadPossible
 		set PC, loadFloppy_err
 	
-	;Waiting for the read to finish
-	:loadFloppy_waitReadFinish
-	set A, 0
-	hwi [floppyDrive]
-	ife B, 0x0003 ;If STATE_BUSY
-		set PC, loadFloppy_waitReadFinish
-		
+	jsr loadFloppy_waitFinish
+	
+	;Checking if disk is BOLD-compatible (see comments upper)
 	ifn [0x9000], 0x9876
 		set B, str_invalid
 	ifn [0x9001], 0x5432
@@ -120,11 +111,7 @@
 		ife B, str_noReadPossible
 			set PC, loadFloppy_err
 		
-		set A, 0
-		:loadFloppy_loop1
-			hwi [floppyDrive]
-			ife B, 0x0003 ;If STATE_BUSY
-			set PC, loadFloppy_loop1
+		jsr loadFloppy_waitFinish
 		
 		ifn X, [0x9002] ;If not read all the sectors
 			set PC, loadFloppy_loop0
@@ -162,6 +149,14 @@
 		set PC, loadFloppy_err_loop0
 	
 	set PC, 0
+	
+:loadFloppy_waitFinish
+	set A, 0
+	:loadFloppy_waitFinish_loop0
+		hwi [floppyDrive]
+		ife B, 0x0003 ;If STATE_BUSY
+		set PC, loadFloppy_waitFinish_loop0
+	set PC, POP
 
 :str_loading DAT "Loading program.                ", 0
 :str_noDrive DAT "No floppy drive detected !      ", 0

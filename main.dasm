@@ -22,8 +22,6 @@
 	set B, 0x0
 	hwi [monitor] ;Setting border color
 	
-	jsr clear ;Clearing the screen (sets the background color)
-	
 	set B, GUI
 	set I, 0x8000
 	jsr write
@@ -40,9 +38,9 @@
 	:writeNames
 		set B, [C]
 		ife J, [selected] ;if selected, printing highlight
-			jsr write_hl
-		ifn J, [selected] ;else, printing normal
-			jsr write
+			set Z, 0xABAB
+		jsr write
+		set Z, 0
 		add I, 0x20
 		add C, 1
 		add J, 1
@@ -111,8 +109,7 @@
 	set Y, ptr_programs
 	add Y, A
 	set Y, [Y]
-	
-	set A, [selected]
+
 	set Z, ptr_endPrograms
 	add Z, A
 	set Z, [Z]
@@ -122,9 +119,8 @@
 	
 :loader
 	:loader_loop0
-		set [I], [Y]
+		sti [I], [Y]
 		add Y, 1
-		add I, 1
 		ifn Y, Z
 			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
 	;Clearing RAM until reaching this
@@ -137,12 +133,13 @@
 	set A, 0
 	set B, 0
 	set C, 0
-	set I, 0
-	set J, 0
 	set X, 0
 	set Y, 0
 	set Z, 0
+	set I, 0
+	set J, 0
 	set EX, 0
+	
 	set PC, 0
 :loader_end
 

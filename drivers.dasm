@@ -11,11 +11,15 @@
 ;;;DESCRIPTION Writes the text in arguments
 ;;;ARG B Address of the string
 ;;;ARG I Where to write (begins at 0x8000)
+;;;If Z = 0xABAB, then writing in highlighted mode.
 :write
 	set PUSH, I
 	:write_loop0
 		set [I], [B]
-		bor [I], [color]
+		ifn Z, 0xABAB
+			bor [I], [color]
+		ife Z, 0xABAB
+			bor [I], [color_hl]
 		add I, 1
 		add B, 1
 		ifn [B], 0
@@ -38,38 +42,6 @@
 			SET PC, detectPeriphs_loop
 		
 	SET PC, POP
-	
-:clear
-	SET I, 0x8000
-	set J, [color]
-	BOR J, 0x0020
-	:clear_loop
-		SET [I], J
-		ADD I, 1
-		IFE I, 0x8180
-			SET PC, POP
-		SET PC, clear_loop
-	
-; =======================
-; WRITE HIGHLIGHTED
-; B : String address
-; J : Address on screen
-; =======================
-	
-:write_hl
-	set PUSH, I
-	
-	:write_hl_loop0
-		set [I], [B]
-		bor [I], [color_hl]
-		add I, 1
-		add B, 1
-		ifn [B], 0
-			set PC, write_hl_loop0
-			
-	set I, POP
-	
-	set PC, POP
 	
 
 ; =======================

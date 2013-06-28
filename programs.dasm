@@ -3,16 +3,16 @@
 ; File: OSes.dasm
 ; *************************
 
-:ptr_names DAT name_1, name_2, name_3, name_4, name_5 ;Comment after name_2 if you only want 2 OS, or name_3 if you want 3.
-:ptr_programs DAT first, second, third, fourth, fifth ;Comment after second if you only want 2 OS, or third if you want 3.
-:ptr_endPrograms DAT first_end, second_end, third_end, fourth_end, fifth_end ;Comment after second_end if you only want 2 OS, or third_end if you want 3.
+:ptr_names DAT str_noBootableFloppy, name_1, name_2, name_3, name_4, name_5 ;Comment after name_2 if you only want 2 OS, or name_3 if you want 3.
+:ptr_programs DAT 0, first, second, third, fourth, fifth ;Comment after second if you only want 2 OS, or third if you want 3.
+:ptr_endPrograms DAT 0, first_end, second_end, third_end, fourth_end, fifth_end ;Comment after second_end if you only want 2 OS, or third_end if you want 3.
 
 ;NAMES MUST BE 30 CHARACTERS LONG AND START WITH A SPACE. FILL WITH SPACES !
-:name_1 DAT " DCPU Basic 1.0              ", 0
-:name_2 DAT " FrOSt                       ", 0
-:name_3 DAT " SimpleOS v2                 ", 0
-:name_4 DAT " SimpleOS v1                 ", 0 ;Name your OS if you add one
-:name_5 DAT " Tetris                      ", 0
+:name_1 DAT " DCPU Basic 1.0 by notch     ", 0
+:name_2 DAT " FrOSt by FrOSt-Foundation   ", 0
+:name_3 DAT " SimpleOS v2 by azertyfun    ", 0
+:name_4 DAT " SimpleOS v1 by azertyfun    ", 0 ;Name your OS if you add one
+:name_5 DAT " Tetris by a1k0n             ", 0
 
 ; ==================
 ; DCPU BASIC 1.0

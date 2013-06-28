@@ -3,14 +3,21 @@
 ; File: loader.dasm
 ; *************************
 
+#define STATUS_ADDRESS 0x8031
+
 ; =================
 ; Load built-in
 ; programs
 ; =================
 
 :load
+	;Don't want to boot from "No bootable floppy" ^^
+	ife [selected], 0
+		ife [bootableFloppy], 0
+			set PC, mainLoop
+	
 	set B, str_loading
-	set I, 0x8160
+	set I, STATUS_ADDRESS
 	jsr write
 	
 	set I, 0
@@ -23,6 +30,8 @@
 	set Z, ptr_endPrograms
 	add Z, A
 	set Z, [Z]
+	
+	jsr clear
 		
 	set PC, 0xE000
 	
@@ -33,6 +42,7 @@
 		add Y, 1
 		ifn Y, Z
 			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
+		
 	
 	set A, 0
 	set B, 0
@@ -56,15 +66,22 @@
 ; The two first words must be 0x9876, 0x5432. That means that this is a BOLD-compatible OS.
 ; Third word must be the number of sectors the program takes (without this first sector). Must be max 32 sectors.
 ; Then 10 reserved words.
-; Words from 14 to 30 contains the name of the program (16 chars, fill with spaces). Not used yet.
+; Words from 14 to 37 contains the name of the program (23 chars, fill with spaces). Not used yet.
 
-:loadFLoppy
-	;Checking disk drive
+:loadFloppy
+	set B, str_loading
+	set I, STATUS_ADDRESS
+	jsr write
+	
+	
+	; -------------
+	; Checking DD
+	; -------------
 	ife [floppyDrive], 0 ;If no disk drive connected
 		set B, str_noDrive
 	ife B, str_noDrive
 		set PC, loadFloppy_err
-	
+
 	set A, 0
 	hwi [floppyDrive] ;If no floppy in the drive (STATE_NO_MEDIA)
 	ife B, 0x0
@@ -72,27 +89,10 @@
 	ife B, str_noFloppy
 		set PC, loadFloppy_err
 		
-	;Reading first sector at 0x9000
-	set A, 2
-	set X, 0
-	set Y, 0x9000
-	hwi [floppyDrive]
-	ifn B, 1
-		set B, str_noReadPossible ;If reading not possible, reboot
-	ife B, str_noReadPossible
-		set PC, loadFloppy_err
+	; -----------------
+	; Reading into mem
+	; -----------------
 	
-	jsr loadFloppy_waitFinish
-	
-	;Checking if disk is BOLD-compatible (see comments upper)
-	ifn [0x9000], 0x9876
-		set B, str_invalid
-	ifn [0x9001], 0x5432
-		set B, str_invalid
-	ife B, str_invalid
-		set PC, loadFloppy_err
-	
-	;If BOLD-compatible drive
 	set X, 0 ;Will be 1 after entered the loop
 	set J, 0 ;Number of sectors read
 	
@@ -116,11 +116,11 @@
 		ifn X, [0x9002] ;If not read all the sectors
 			set PC, loadFloppy_loop0
 	
-	;We have loaded X sectors at 0xA000 ! We can load the program into the memory
-	set B, str_loading
-	set I, 0x8160
-	jsr write
+	; -------------
+	; Booting...
+	; -------------
 	
+	;We have loaded X sectors at 0xA000 ! We can load the program into the memory
 	set I, 0
 	
 	set Y, 0xA000
@@ -128,14 +128,17 @@
 	set Z, [0x9002] ;Number of sectors the program takes
 	mul Z, 0x200
 	add Z, 0xA000
+	
+	jsr clear
 		
 	set PC, 0xE000 ;We can now load the program !
 	
 ; ====================
+; Displays error restarts BOLD...
 ; B : Pointer to the err string
 ; ====================
 :loadFloppy_err
-	set I, 0x8160
+	set I, STATUS_ADDRESS
 	jsr write
 	
 	set A, 0
@@ -149,7 +152,10 @@
 		set PC, loadFloppy_err_loop0
 	
 	set PC, 0
-	
+
+; =============
+; Waits until disk operation finished
+; =============
 :loadFloppy_waitFinish
 	set A, 0
 	:loadFloppy_waitFinish_loop0
@@ -158,7 +164,7 @@
 		set PC, loadFloppy_waitFinish_loop0
 	set PC, POP
 
-:str_loading DAT "Loading program.                ", 0
+:str_loading DAT "Loading program", 0
 :str_noDrive DAT "No floppy drive detected !      ", 0
 :str_noFloppy DAT "No floppy into the media drive !", 0
 :str_noReadPossible DAT "Impossible to read from floppy !", 0

@@ -44,7 +44,17 @@
 			SET PC, detectPeriphs_loop
 		
 	SET PC, POP
-	
+
+:clear
+	set PUSH, I
+	SET I, 0x8000
+	:clear_loop
+		SET [I], 0xF020
+		ADD I, 1
+		IFN I, 0x8180
+			set PC, clear_loop
+	SET I, POP
+	set PC, POP
 
 ; =======================
 ; A : Start

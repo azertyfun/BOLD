@@ -1,12 +1,7 @@
-; *************************
-; Project: GRUB
-; File: drivers.dasm
-; *************************
-
 ; ======================================================================
 ; This is only the needed drivers. Not anything else. I AM NOT AN OS ^^
 ; ======================================================================
-		
+
 ;;;FONCTION write (0x1)
 ;;;DESCRIPTION Writes the text in arguments
 ;;;ARG B Address of the string
@@ -24,7 +19,7 @@
 		add B, 1
 		ifn [B], 0
 			set PC, write_loop0
-	
+
 	set I, POP
 	set PC, POP
 
@@ -34,16 +29,55 @@
 	:detectPeriphs_loop
 		HWQ J
 		IFE A, 0xf615
-			SET [monitor], J
+			IFE B, 0x7349
+				SET [monitor], J
 		IFE A, 0x7406
-			SET [keyboard], J
+			IFE B, 0x30CF
+				SET [keyboard], J
 		IFE A, 0x24C5
-			SET [floppyDrive], J
+			IFE B, 0x4FD5
+				JSR detectPeriphs_addFloppy
+		IFE A, 0x525D
+			IFE B, 0x4AC5
+				JSR detectPeriphs_addHD
 		ADD J, 1
 		IFN J, I
 			SET PC, detectPeriphs_loop
-		
+
 	SET PC, POP
+
+	:detectPeriphs_addHD
+		SET A, 0x0005
+		HWI J
+		set PC, detectPeriphs_addDisk
+
+	:detectPeriphs_addFloppy
+		set A, 0
+		hwi J
+		IFE B, 0 ; STATE_NO_MEDIA
+			set PC, POP
+
+		set PC, detectPeriphs_addDisk
+
+	:detectPeriphs_addDisk
+		SET A, [n_drives]
+		ifl A, 6
+			SET [drives + A], J
+		ADD [n_drives], 1
+
+		SET PC, POP
+
+; =============
+; Waits until disk operation finished
+; I for the Ith floppy drive
+; =============
+:loadFloppy_waitFinish
+	set A, 0
+	:loadFloppy_waitFinish_loop0
+		hwi [drives + I]
+		ife B, 0x0003 ;If STATE_BUSY
+		set PC, loadFloppy_waitFinish_loop0
+	set PC, POP
 
 :clear
 	set PUSH, I
@@ -61,7 +95,7 @@
 ; B : End
 ; C : Address to copy to
 ; =======================
-	
+
 :memcpy
 	set [C], [A]
 	add A, 1
@@ -72,7 +106,11 @@
 
 :monitor DAT 0
 :keyboard DAT 0
-:floppyDrive DAT 0
+:drives DAT 0, 0, 0, 0, 0, 0
+:drives_compatible DAT 0, 0, 0, 0, 0, 0
+:drives_startSectors DAT 0, 0, 0, 0, 0, 0
+:drives_nSectors DAT 0, 0, 0, 0, 0, 0
+:n_drives DAT 0
 
 :color DAT 0xF000
 :color_hl DAT 0x0F00

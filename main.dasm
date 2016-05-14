@@ -1,9 +1,4 @@
-; *************************
-; Project: GRUB
-; File: main.dasm
-; *************************
-
-#define NB_PROGRAMS 6 ;Change to your number of OS (max 5)
+#define MAX_DRIVE_COUNT 6
 
 :start
 	;First, we copy the loader at 0xE000.
@@ -13,56 +8,58 @@
 	jsr memcpy
 
 	jsr detectPeriphs ;Detecting peripherals
-	
+
 	set A, 0
 	set B, 0x8000
 	hwi [monitor] ;Mapping monitor
-	
-	set B, GUI
+
+	set [selected], 0
+
+	set B, prompt
 	set I, 0x8000
 	jsr write
 
-	set [selected], 0
-	
-	; ==========================
-	; Testing if floppy present
-	; =========================
-	
-	;Checking disk drive
-	ife [floppyDrive], 0 ;If no disk drive connected
+	ife [n_drives], 0
 		set PC, mainLoop
-	
-	set A, 0
-	hwi [floppyDrive] ;If no floppy in the drive (STATE_NO_MEDIA)
-	ife B, 0x0
-		set PC, mainLoop
-		
-	;Reading first sector at 0x9000
-	set A, 2
-	set X, 0
-	set Y, 0x9000
-	hwi [floppyDrive]
-	ifn B, 1
-		set PC, mainLoop
-	
-	jsr loadFloppy_waitFinish
-	
-	;Checking if disk is BOLD-compatible (see loadFloppy section)
-	set B, str_bootableFloppy
-	ifn [0x9000], 0x9876
-		set B, str_noBootableFloppy
-	ifn [0x9001], 0x5432
-		set B, str_noBootableFloppy
-	set [ptr_names], B
-	
-	ife B, str_bootableFloppy
-		jsr setFloppyName
-	
+
+	set I, 0
+
+	:readDiskHeaders
+		;Reading first sector at 0x9000
+		set A, 2
+		set X, 0
+		set Y, 0x9000
+
+		hwi [drives + I]
+		ifn B, 1
+			ifn B, 2
+				set PC, readDiskHeaders_skip
+
+		jsr loadFloppy_waitFinish
+
+		;Checking if disk is BBOS-compatible
+		set B, str_bootableFloppy
+		ifn [Y + 0x1FF], 0x55AA
+			set B, str_noBootableFloppy
+		set [ptr_names + I], B
+
+		ifn [Y + 0x1FF], 0x55AA
+			set PC, readDiskHeaders_skip
+
+		set [drives_compatible + I], 1
+		set [drives_startSectors + I], [Y + 0x1FD]
+		set [drives_nSectors + I], [Y + 0x1FE]
+
+		:readDiskHeaders_skip
+		add I, 1
+		ifn I, [n_drives]
+			set PC, readDiskHeaders
+
 :mainLoop
 	;Printing programs with one highlighted
-	
+
 	set C, ptr_names
-	set I, 0x80A1
+	set I, 0x8020
 	set J, 0
 	:writeNames
 		set B, [C]
@@ -73,31 +70,27 @@
 		add I, 0x20
 		add C, 1
 		add J, 1
-		ifn J, NB_PROGRAMS
+		ifn J, MAX_DRIVE_COUNT
 			set PC, writeNames
-	
+
 	set A, 0
 	hwi [keyboard] ;Clears keyboard buffer
-		
+
 	;Waiting for user to type a letter
 	set A, 1
 	:waitKey_loop
 	hwi [keyboard]
 	ife C, 0
 		set PC, waitKey_loop
-	
+
 	jsr handleKey
-	
+
 	set [0xFF88], [selected]
-	
-	ife Z, 1
-		ifn [selected], 0
-			set PC, load
+
 	ife Z, 1
 		set PC, loadFloppy
-		
-	set PC, mainLoop
 
+	set PC, mainLoop
 
 :handleKey
 	set Z, 0
@@ -105,56 +98,37 @@
 		ifn C, 0x66 ;KEY_F
 			ifn C, 0x11 ;KEY_RETURN
 				set PC, POP
-	
+
 	ife C, 0x72 ;KEY_R
 		set PC, handleKey_up
 	ife C, 0x11 ;RETURN
 		set PC, handleKey_return
-	
+
 	;If not R or return, must be F, don't need to test.
-	
+
 	:handleKey_down
 		add [selected], 1
-		ife [selected], NB_PROGRAMS
+		ife [selected], MAX_DRIVE_COUNT
 			set [selected], 0
 		set PC, POP
-	
+
 	:handleKey_up
 		sub [selected], 1
 		ife [selected], -1
-			set [selected], NB_PROGRAMS
-		ife [selected], NB_PROGRAMS
+			set [selected], MAX_DRIVE_COUNT
+		ife [selected], MAX_DRIVE_COUNT
 			sub [selected], 1
 		set PC, POP ;Back to main loop
-	
+
 	:handleKey_return
 		set Z, 1 ;We want to launch then ^^
 		set PC, POP
-		
-:setFloppyName
-	set A, 0x900D
-	set B, 0x9024
-	set C, str_bootableFloppy_name
-	jsr memcpy
-	set PC, POP
 
-:GUI
-DAT 0x1F, 0x1B, 0x1C, 0x20, 0x1c, 0x1b, 0x1c, 0x20, 0x1F, 0x20, 0x20, 0x20, 0x20, 0x1F, 0x1b, 0x1C, "  2013 azertyfun"
-DAT 0x1F, 0x1C, 0x1b, 0x20, 0x1F, 0x20, 0x1F, 0x20, 0x1F, 0x20, 0x20, 0x20, 0x20, 0x1F, 0x20, 0x1F, "                "
-DAT 0x1F, 0x20, 0x1F, 0x20, 0x1F, 0x20, 0x1F, 0x20, 0x1F, 0x20, 0x20, 0x20, 0x20, 0x1F, 0x20, 0x1F, "       Press R/F"
-DAT 0x1F, 0x1C, 0x1b, 0x20, 0x1b, 0x1C, 0x1B, 0x20, 0x1F, 0x1C, 0x1C, 0x20, 0x20, 0x1F, 0x1C, 0x1B, "    to select OS"
-DAT 0x09, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x0A
-DAT 0x08, "                              ", 0x08
-DAT 0x08, "                              ", 0x08
-DAT 0x08, "                              ", 0x08
-DAT 0x08, "                              ", 0x08
-DAT 0x08, "                              ", 0x08
-DAT 0x08, "                              ", 0x08
-DAT 0x0C, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x0B
-
+:prompt DAT "Press R/F to select OS"
 :selected DAT 0
 
 :bootableFloppy DAT 0
-:str_bootableFloppy DAT " DD : "
-:str_bootableFloppy_name DAT "                       ", 0
-:str_noBootableFloppy DAT " No bootable floppy detected  ", 0
+:str_bootableFloppy DAT "BBOS-Compatible disk", 0
+:str_noBootableFloppy DAT "No bootable floppy detected", 0
+
+:ptr_names DAT str_noBootableFloppy, str_noBootableFloppy, str_noBootableFloppy, str_noBootableFloppy, str_noBootableFloppy, str_noBootableFloppy ;Comment after name_2 if you only want 2 OS, or name_3 if you want 3.

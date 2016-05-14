@@ -1,0 +1,79 @@
+.magic 0x1FD 01
+.magic 0x1FE 0x50 ; Modify manually to speed up loading process **a lot**
+.magic 0x1FF 0x55AA
+
+set PUSH, A
+
+set [os_length_plus_one], [0x1FE]
+add [os_length_plus_one], 1
+
+set A, loader
+set B, loader_end
+set C, 0xE000
+jsr memcpy
+
+jsr detectPeriphs
+
+set A, 0
+set B, 0x8000
+hwi [monitor] ;Mapping monitor
+
+set B, loading_str
+set I, 0x8000
+jsr write
+
+set X, 1
+set Y, 0xA000
+set I, POP
+:copy_loop
+    set A, 2
+    hwi [drives + I]
+
+    jsr loadFloppy_waitFinish
+
+    add X, 1
+    add Y, 0x200
+    ifn X, [os_length_plus_one]
+        set PC, copy_loop
+
+set Y, 0xA000
+set Z, 0xA000
+set A, [0x1FE] ; OS length
+mul A, 0x200
+add Z, A
+set I, 0
+set PC, 0xE000
+
+.include drivers.dasm
+
+; Loads a program from Y to Z at address 0
+; I must be 0
+:loader
+
+    :loader_loop0
+        sti [I], [Y]
+        add Y, 1
+        ifn Y, Z
+            set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
+
+    :loader_clearRam_continue
+
+    set A, 0
+    set B, 0
+    set C, 0
+    set X, 0
+    set Y, 0
+    set Z, 0
+    set I, 0
+    set J, 0
+    set EX, 0
+
+    set PC, 0
+
+:loader_end
+
+:loading_str DAT "Loading the OS from disk...", 0
+
+:os_length_plus_one dat 0
+
+:BOLD_end

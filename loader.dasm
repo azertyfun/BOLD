@@ -1,50 +1,15 @@
-; *************************
-; Project: BOLD
-; File: loader.dasm
-; *************************
-
-#define STATUS_ADDRESS 0x8031
-
-; =================
-; Load built-in
-; programs
-; =================
-
-:load
-	;Don't want to boot from "No bootable floppy" ^^
-	ife [selected], 0
-		ife [bootableFloppy], 0
-			set PC, mainLoop
-	
-	set B, str_loading
-	set I, STATUS_ADDRESS
-	jsr write
-	
-	set I, 0
-	
-	set A, [selected]
-	set Y, ptr_programs
-	add Y, A
-	set Y, [Y]
-
-	set Z, ptr_endPrograms
-	add Z, A
-	set Z, [Z]
-	
-	jsr clear
-		
-	set PC, 0xE000
-	
-	
+; Loads a program from Y to Z at address 0
+; I must be 0
 :loader
 	:loader_loop0
 		sti [I], [Y]
 		add Y, 1
 		ifn Y, Z
 			set PC, 0xE000 ;Let's go back to the loop (can't use loader_loop0 because the address changes while copying lodaer)
-		
-	
-	set A, 0
+
+	; We don't have to clear the RAM, since BOLD is one sector long, so it's already overwritten by now.
+
+	; We don't reset A since it holds the current drive
 	set B, 0
 	set C, 0
 	set X, 0
@@ -53,119 +18,52 @@
 	set I, 0
 	set J, 0
 	set EX, 0
-	
+
 	set PC, 0
 :loader_end
 
 
 ; =================
-; Load from floppy  
+; Load from floppy
 ; =================
-; First sector of the floppy must contain infos for BOLD :
-;
-; The two first words must be 0x9876, 0x5432. That means that this is a BOLD-compatible OS.
-; Third word must be the number of sectors the program takes (without this first sector). Must be max 32 sectors.
-; Then 10 reserved words.
-; Words from 14 to 37 contains the name of the program (23 chars, fill with spaces). Not used yet.
 
 :loadFloppy
-	set B, str_loading
-	set I, STATUS_ADDRESS
-	jsr write
-	
-	
-	; -------------
-	; Checking DD
-	; -------------
-	ife [floppyDrive], 0 ;If no disk drive connected
-		set B, str_noDrive
-	ife B, str_noDrive
-		set PC, loadFloppy_err
+	set I, [selected]
 
-	set A, 0
-	hwi [floppyDrive] ;If no floppy in the drive (STATE_NO_MEDIA)
-	ife B, 0x0
-		set B, str_noFloppy
-	ife B, str_noFloppy
-		set PC, loadFloppy_err
-		
+	ife [drives_compatible + I], 0
+		set PC, mainLoop
+
 	; -----------------
 	; Reading into mem
 	; -----------------
-	
-	set X, 0 ;Will be 1 after entered the loop
-	set J, 0 ;Number of sectors read
-	
-	:loadFloppy_loop0
-		add X, 1
 
-		set A, 0x0002 ;Read sectors
-		STI Y, J ;We want to read at 0xA000 + number of sectors read
-		mul Y, 0x200
-		add Y, 0xA000
-		hwi [floppyDrive]
-		
-		;If error happened, displaying error text and rebooting
-		ifn B, 1
-			set B, str_noReadPossible
-		ife B, str_noReadPossible
-			set PC, loadFloppy_err
-		
-		jsr loadFloppy_waitFinish
-		
-		ifn X, [0x9002] ;If not read all the sectors
-			set PC, loadFloppy_loop0
-	
+	set I, [selected]
+
+	set A, 2
+	set X, 0 ; Sector to read
+	set Y, 0xA000
+	hwi [drives + I]
+
+	ifn B, 1
+		set PC, mainLoop
+
+	jsr loadFloppy_waitFinish
+
 	; -------------
 	; Booting...
 	; -------------
-	
-	;We have loaded X sectors at 0xA000 ! We can load the program into the memory
+
+	; We can load the program into the memory
 	set I, 0
-	
+
 	set Y, 0xA000
-	
-	set Z, [0x9002] ;Number of sectors the program takes
+
+	set Z, 1 ;Number of sectors the program takes
 	mul Z, 0x200
 	add Z, 0xA000
-	
+
 	jsr clear
-		
+
+	set A, [selected] ; So the program knows from which drive to boot
+
 	set PC, 0xE000 ;We can now load the program !
-	
-; ====================
-; Displays error restarts BOLD...
-; B : Pointer to the err string
-; ====================
-:loadFloppy_err
-	set I, STATUS_ADDRESS
-	jsr write
-	
-	set A, 0
-	hwi [keyboard] ;Clears keyboard buffer
-		
-	;Waiting for user to type a letter
-	set A, 1
-	:loadFloppy_err_loop0
-	hwi [keyboard]
-	ife C, 0
-		set PC, loadFloppy_err_loop0
-	
-	set PC, 0
-
-; =============
-; Waits until disk operation finished
-; =============
-:loadFloppy_waitFinish
-	set A, 0
-	:loadFloppy_waitFinish_loop0
-		hwi [floppyDrive]
-		ife B, 0x0003 ;If STATE_BUSY
-		set PC, loadFloppy_waitFinish_loop0
-	set PC, POP
-
-:str_loading DAT "Loading program", 0
-:str_noDrive DAT "No floppy drive detected !      ", 0
-:str_noFloppy DAT "No floppy into the media drive !", 0
-:str_noReadPossible DAT "Impossible to read from floppy !", 0
-:str_invalid DAT "Not compatible floppy !         ", 0

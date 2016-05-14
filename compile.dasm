@@ -13,6 +13,5 @@ set PC, start
 #include main.dasm
 #include drivers.dasm
 #include loader.dasm
-#include programs.dasm
 
-:GRUB_end DAT 0x1234
+:BOLD_end

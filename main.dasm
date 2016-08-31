@@ -13,7 +13,7 @@
 	set B, 0x8000
 	hwi [monitor] ;Mapping monitor
 
-	set [selected], 0
+	set [selected], 0xFFFF
 
 	set B, prompt
 	set I, 0x8000
@@ -58,39 +58,16 @@
 :mainLoop
 	;Printing programs with one highlighted
 
-	set C, ptr_names
-	set I, 0x8020
-	set J, 0
-	:writeNames
-		set B, [C]
-		ife J, [selected] ;if selected, printing highlight
-			set Z, 0xABAB
-		jsr write
-		set Z, 0
-		add I, 0x20
-		add C, 1
-		add J, 1
-		ifn J, MAX_DRIVE_COUNT
-			set PC, writeNames
+	add [selected], 1
+	set I, 0
+	:mainLoop_loop
+		ife [drives_compatible + I], 1
+			set [selected], I
+		ife [drives_compatible + I], 1
+			set PC, loadFloppy
 
-	set A, 0
-	hwi [keyboard] ;Clears keyboard buffer
-
-	;Waiting for user to type a letter
-	set A, 1
-	:waitKey_loop
-	hwi [keyboard]
-	ife C, 0
-		set PC, waitKey_loop
-
-	jsr handleKey
-
-	set [0xFF88], [selected]
-
-	ife Z, 1
-		set PC, loadFloppy
-
-	set PC, mainLoop
+		add I, 1
+		set PC, mainLoop_loop
 
 :handleKey
 	set Z, 0
